@@ -10,6 +10,8 @@ import time
 import random
 import logging
 
+import torch
+
 from PIL import Image, ImageOps, ImageSequence, ImageFile
 from PIL.PngImagePlugin import PngInfo
 
@@ -152,6 +154,7 @@ class SaveImage:
     @classmethod
     def IS_CHANGED(s, latent):
         # 强制刷新，这在api请求时候总会在ws返回executed 事件。
+        # 需要禁止rgtree的替换优化,否则会冲突失效。
         self.is_changed = not self.is_changed
         return self.is_changed
 
