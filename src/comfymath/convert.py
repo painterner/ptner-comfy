@@ -36,6 +36,9 @@ import folder_paths
 import latent_preview
 import node_helpers
 
+import base64
+from io import BytesIO
+
 class Textbox:
     @classmethod
     def INPUT_TYPES(cls) -> Mapping[str, Any]:
@@ -47,6 +50,21 @@ class Textbox:
 
     def func(self, a: str) -> tuple[str]:
         return (a,)
+    
+class CheckpointLoaderDynamic:
+    @classmethod
+    def INPUT_TYPES(s):
+        return {"required": { "ckpt_name": ("STRING",  {"multiline": False,}),
+                             }}
+    RETURN_TYPES = ("MODEL", "CLIP", "VAE")
+    FUNCTION = "load_checkpoint"
+
+    CATEGORY = "loaders"
+
+    def load_checkpoint(self, ckpt_name):
+        print("dynamic loading from", ckpt_name)
+        out = comfy.sd.load_checkpoint_guess_config(ckpt_name, output_vae=True, output_clip=True, embedding_directory=folder_paths.get_folder_paths("embeddings"))
+        return out[:3]
 
 class LoadImage:
     @classmethod
@@ -63,8 +81,6 @@ class LoadImage:
     FUNCTION = "load_image"
     def load_image(self, image):
         if not folder_paths.exists_annotated_filepath(image):
-            import base64
-            from io import BytesIO
             img = node_helpers.pillow(Image.open, BytesIO(base64.b64decode(image)))
         else:
             image_path = folder_paths.get_annotated_filepath(image)
@@ -187,9 +203,87 @@ class SaveImage:
 
         return { "ui": { "images": results } }
 
+
+class PreviewImage(SaveImage):
+    def __init__(self):
+        self.output_dir = folder_paths.get_temp_directory()
+        self.type = "temp"
+        self.prefix_append = "_temp_" + ''.join(random.choice("abcdefghijklmnopqrstupvxyz") for x in range(5))
+        self.compress_level = 1
+
+    @classmethod
+    def INPUT_TYPES(s):
+        return {"required":
+                    {"images": ("IMAGE", ), },
+                "hidden": {"prompt": "PROMPT", "extra_pnginfo": "EXTRA_PNGINFO"},
+                }
+        
+class ReplaceSvgViewBox:
+    @classmethod
+    def INPUT_TYPES(s):
+        return {"required":
+                    {"svg_content": ("STRING",  {"multiline": True,}),
+                     "new_width": ("INT", {"default": 1024, "min": 0, "max": 65536}),
+                     "new_height": ("INT", {"default": 1024, "min": 0, "max": 65536})},
+                }
+
+    CATEGORY = "image"
+
+    RETURN_TYPES = ("STRING",)
+    FUNCTION = "modify_svg"
+        
+    def modify_svg(self, svg_content, new_width, new_height):
+        import re
+        # 匹配 width 和 height 属性 (假设它们的顺序不变)
+        width_pattern = r'width="(\d+)"'
+        height_pattern = r'height="(\d+)"'
+
+        width_match = re.search(width_pattern, svg_content)
+        height_match = re.search(height_pattern, svg_content)
+
+        if width_match and height_match:
+            original_width = width_match.group(1)
+            original_height = height_match.group(1)
+
+            # 替换 width 和 height 属性
+            svg_content = re.sub(width_pattern, f'width="{new_width}"', svg_content, 1)
+            svg_content = re.sub(height_pattern, f'height="{new_height}"', svg_content, 1)
+
+            # 增加 viewBox 属性
+            viewBox = f'viewBox="0 0 {original_width} {original_height}"'
+            svg_content = re.sub(r'<svg([^>]*)>', rf'<svg\1 {viewBox}>', svg_content, 1)
+
+            print("SVG文件已成功修改。")
+        else:
+            print("未能匹配到 width 或 height 属性。")
+            
+        return (svg_content, )
+
+class CalcToCondition:
+    @classmethod
+    def INPUT_TYPES(s):
+        return {"required":
+                    {
+                     "width": ("INT", {"default": 1024, "min": 0, "max": 65536}),
+                     "height": ("INT", {"default": 1024, "min": 0, "max": 65536})},
+                }
+    CATEGORY = "image"
+
+    RETURN_TYPES = ("INT",)
+    FUNCTION = "modify_svg"
+        
+    def modify_svg(self, width, height):
+        if(width >= height):
+            return (1, )
+        else:
+            return (2, )
+
 NODE_CLASS_MAPPINGS = {
     "Text box": Textbox,
     "Text": Textbox,
     "Pt-Save Image": SaveImage,
-    "Pt-Load Image": LoadImage
+    "Pt-Preview Image": PreviewImage,
+    "Pt-Load Image": LoadImage,
+    "Pt-Load Checkpoint": CheckpointLoaderDynamic,
+    "Pt-ReplaceSvgViewBox": ReplaceSvgViewBox,
 }

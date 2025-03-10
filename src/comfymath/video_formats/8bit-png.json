@@ -1,0 +1,7 @@
+{
+    "main_pass":
+    [
+        "-y"
+    ],
+    "extension": "%03d.png"
+}
