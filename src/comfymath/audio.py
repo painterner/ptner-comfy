@@ -54,23 +54,35 @@ def load(filepath: str) -> tuple[torch.Tensor, int]:
         wav = f32_pcm(wav)
         return wav, sr
 
-class LoadAudio(IO.ComfyNode):
+class LoadAudio():
+    # @classmethod
+    # def define_schema(cls):
+    #     input_dir = folder_paths.get_input_directory()
+    #     files = folder_paths.filter_files_content_types(os.listdir(input_dir), ["audio", "video"])
+    #     return IO.Schema(
+    #         node_id="PtLoadAudio",
+    #         search_aliases=["import audio", "open audio", "audio file"],
+    #         display_name="Pt Load Audio",
+    #         category="audio",
+    #         essentials_category="Audio",
+    #         inputs=[
+    #             # IO.Combo.Input("audio", upload=IO.UploadType.audio, options=sorted(files)),
+    #             IO.String.Input("audio", default=""),
+    #         ],
+    #         outputs=[IO.Audio.Output()],
+    #     )
+        
+    RETURN_TYPES = ("AUDIO",)
+    
+    FUNCTION = "execute"
+    
     @classmethod
-    def define_schema(cls):
+    def INPUT_TYPES(s):
         input_dir = folder_paths.get_input_directory()
-        files = folder_paths.filter_files_content_types(os.listdir(input_dir), ["audio", "video"])
-        return IO.Schema(
-            node_id="PtLoadAudio",
-            search_aliases=["import audio", "open audio", "audio file"],
-            display_name="Pt Load Audio",
-            category="audio",
-            essentials_category="Audio",
-            inputs=[
-                # IO.Combo.Input("audio", upload=IO.UploadType.audio, options=sorted(files)),
-                IO.String.Input("audio", default=""),
-            ],
-            outputs=[IO.Audio.Output()],
-        )
+        files = [f for f in os.listdir(input_dir) if os.path.isfile(os.path.join(input_dir, f))]
+        return {"required":
+                    {"audio": (sorted(files), {"audio_upload": True})},
+                }
 
     @classmethod
     def execute(cls, audio) -> IO.NodeOutput:
