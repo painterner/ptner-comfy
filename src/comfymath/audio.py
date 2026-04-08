@@ -13,10 +13,20 @@ import numpy as np
 import folder_paths
 import node_helpers
 
+import av
 import base64
 from io import BytesIO
 from comfy_api.latest import ComfyExtension, IO, UI
 
+def f32_pcm(wav: torch.Tensor) -> torch.Tensor:
+    """Convert audio to float 32 bits PCM format."""
+    if wav.dtype.is_floating_point:
+        return wav
+    elif wav.dtype == torch.int16:
+        return wav.float() / (2 ** 15)
+    elif wav.dtype == torch.int32:
+        return wav.float() / (2 ** 31)
+    raise ValueError(f"Unsupported wav dtype: {wav.dtype}")
 
 def load(filepath: str) -> tuple[torch.Tensor, int]:
     with av.open(filepath) as af:
