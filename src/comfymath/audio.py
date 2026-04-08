@@ -124,18 +124,18 @@ class PtLoadAudio(IO.ComfyNode):
 
     @classmethod
     def execute(cls, audio) -> IO.NodeOutput:
-        logging.info(f"PtLoadAudio: Loading audio from {audio}")
+        # logging.info(f"PtLoadAudio: Loading audio from {audio}")
         audio_path = folder_paths.get_annotated_filepath(audio)
-        logging.info(f"PtLoadAudio: Loading audio from {audio_path}")
+        # logging.info(f"PtLoadAudio: Loading audio from {audio_path}")
         waveform, sample_rate = load(audio_path)
         audio = {"waveform": waveform.unsqueeze(0), "sample_rate": sample_rate}
         return IO.NodeOutput(audio)
 
     @classmethod
     def fingerprint_inputs(cls, audio):
-        logging.info(f"PtLoadAudio: chaning audio from {audio}")
+        # logging.info(f"PtLoadAudio: chaning audio from {audio}")
         image_path = folder_paths.get_annotated_filepath(audio)
-        logging.info(f"PtLoadAudio: chaning audio from {image_path}")
+        # logging.info(f"PtLoadAudio: chaning audio from {image_path}")
         m = hashlib.sha256()
         with open(image_path, 'rb') as f:
             m.update(f.read())
